@@ -1,0 +1,12 @@
+#指定哪些類型不追蹤
+*.txt
+*png
+*jpg
+ss
+#指定那些檔案不追蹤
+windows_v1.8.1/
+coco8/
+detect/
+Yolo_v8.py
+yolov8n.pt
+windows_v1.8.1.zip
