@@ -1,97 +1,100 @@
 import cv2
 import numpy as np
-import math
-import matplotlib.pyplot as plt
 
-
-#球半徑
+# 球半徑
 radius = 28
 
-#導入桌子
-table=cv2.imread("direct.jpg")
+# 導入桌子圖
+table = cv2.imread("combine.png")
 
-#球座標標示
-balls=np.array([[140,360],  #白球
-                [380,430],  #目標球
-                [300,400]]) #其他球
-white_ball=balls[0]
-target_ball=balls[1]
+# 球座標：[白球、目標球、其他障礙球...]
+balls = np.array([
+    [120, 740],  # 白球
+    [310, 810],  # 目標球
+    [200, 550],  # 障礙球1
+    [400, 925],  # 障礙球2
+])
+
+white_ball = balls[0]
+target_ball = balls[1]
+
+# 標示球
 for i in balls:
-    cv2.circle(table,i,10,(255,0,0),-1)
+    cv2.circle(table, i, 10, (255, 0, 0), -1)
 
-#洞座標標示
-hole=np.array([[0,0],[500,0],[500,1000],[0,1000],[0,500],[500,500]])
+# 洞座標
+hole = np.array([
+    [0, 0], [500, 0], [500, 1000],
+    [0, 1000], [0, 500], [500, 500]
+])
+
+# 標示洞口
 for i in hole:
-    cv2.circle(table,i,10,(255,0,0),-1)
+    cv2.circle(table, i, 10, (255, 0, 0), -1)
 
-#碰撞檢測
+# 碰撞檢查函數
 def collide(w_v, t_v, ball):
-    v_oab = (w_v[0]-t_v[0],w_v[1]-t_v[1])
+    v_ab = (w_v[1] - t_v[1], -w_v[0] + t_v[0])
+    dv_ab = np.linalg.norm(v_ab)
+    dis = abs((w_v[1] - t_v[1]) * ball[0] + (-w_v[0] + t_v[0]) * ball[1] + t_v[1] * w_v[0] - t_v[0] * w_v[1]) / dv_ab
+
+    v_oab = (w_v[0] - t_v[0], w_v[1] - t_v[1])
     dv_oab = np.linalg.norm(v_oab)
-    point = np.zeros(2)
-    v_ab = (w_v[1]-t_v[1], -w_v[0]+t_v[0])
-    dv_ab=np.linalg.norm(v_ab)
-    dis = abs((w_v[1]-t_v[1])*ball[0]+(-w_v[0]+t_v[0])*ball[1]+t_v[1]*w_v[0]-t_v[0]*w_v[1])/dv_ab
-    point[0] = ball[0] - ((w_v[1]-t_v[1])*(w_v[1]-t_v[1])*ball[0]+(-w_v[0]+t_v[0])*ball[1]+t_v[1]*w_v[0]-t_v[0]*w_v[1])/((w_v[1]-t_v[1])**2+(-w_v[0]+t_v[0])**2)
-    point[1] = ball[1] - ((w_v[1]-t_v[1])*(w_v[1]-t_v[1])*ball[0]+(-w_v[0]+t_v[0])*ball[1]+t_v[1]*w_v[0]-t_v[0]*w_v[1])/((w_v[1]-t_v[1])**2+(-w_v[0]+t_v[0])**2)
-    v_pw = (point[0]-w_v[0],point[1]-w_v[1])
-    v_pt = (point[0]-t_v[0],point[1]-t_v[1])
 
-    dv_pw=np.linalg.norm(v_pw)
-    dv_pt=np.linalg.norm(v_pt)   
+    v_bw = (ball[0] - w_v[0], ball[1] - w_v[1])
+    v_bt = (ball[0] - t_v[0], ball[1] - t_v[1])
+    dv_bw = np.linalg.norm(v_bw)
+    dv_bt = np.linalg.norm(v_bt)
 
-
-    if(dis < 56 ):
-        #print(dis)
-        if(dv_pt + dv_pw == dv_oab):
-           
-            return 0
-        else:
-        
+    if dis < 56:
+        if dv_bw > dv_oab or dv_bt > dv_oab:
             return 1
+        else:
+            return 0
     else:
         return 1
 
-#角度
-theta=np.empty(6, dtype=float)
+# 判斷路線是否完全暢通
+def path_clear(w_v, t_v, others):
+    for ball in others:
+        if collide(w_v, t_v, ball) == 0:
+            return 0
+    return 1
 
-#計算向量/長度
-v1 = np.subtract(balls[1],balls[0])
+# 計算角度陣列
+theta = np.empty(6, dtype=float)
+
+# 白球到目標球向量
+v1 = np.subtract(target_ball, white_ball)
 dv1 = np.linalg.norm(v1)
-for i in range(int(len(hole))):
-    v=np.subtract(hole[i],balls[1])
+
+# 檢查每個洞口
+for i in range(len(hole)):
+    v = np.subtract(hole[i], target_ball)
     dv = np.linalg.norm(v)
+    dot = np.dot(v, v1) / (dv * dv1)
+    theta[i] = np.degrees(np.arccos(dot))
 
-    #內積/角度
-    dot=(np.dot(v,v1))/(dv*dv1)
-    theta[i]=np.degrees(np.arccos(dot))
-    #print(theta)
+    if theta[i] < 80:
+        # 確認所有障礙球是否都不擋路
+        other_balls = balls[2:]
+        clear_to_target = path_clear(white_ball, target_ball, other_balls)
+        clear_to_hole = path_clear(target_ball, hole[i], other_balls)
 
+        if clear_to_target and clear_to_hole:
+            # 計算假想球位置（白球要打的位置）
+            vv = v / dv
+            f_x = target_ball[0] - int(vv[0] * 2 * radius)
+            f_y = target_ball[1] - int(vv[1] * 2 * radius)
 
-    if(theta[i] < 80 ):
+            # 畫假想球與路徑
+            cv2.circle(table, (f_x, f_y), 28, (255, 255, 255), 2)
+            cv2.arrowedLine(table, white_ball, (f_x, f_y), (255, 0, 0), 5)
+            cv2.arrowedLine(table, target_ball, hole[i], (255, 0, 0), 5)
 
-        test = collide(white_ball,target_ball,balls[2])
-        test_h = collide(hole[i],target_ball,balls[2])
-
-        if(test and test_h):
-
-            #單位向量
-            vv=v/dv  
-
-            #計算假想球位置
-            f_x=target_ball[0]-int(vv[0]*2*radius)
-            f_y=target_ball[1]-int(vv[1]*2*radius)
-
-            #畫出假想球
-            cv2.circle(table,(f_x,f_y),28,(255,255,255),2)
-
-            #畫出路徑
-            cv2.arrowedLine(table,balls[0],(f_x,f_y),(255,0,0),5)
-            cv2.arrowedLine(table,balls[1],hole[i],(255,0,0),5)
-
-#順時針旋轉90度
+# 旋轉畫面
 table = cv2.rotate(table, cv2.ROTATE_90_CLOCKWISE)
 
-cv2.imshow("direct",table)
+cv2.imshow("direct", table)
 cv2.waitKey(0)
 cv2.destroyAllWindows()

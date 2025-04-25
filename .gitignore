@@ -7,6 +7,12 @@ ss
 windows_v1.8.1/
 coco8/
 detect/
+game_hand/
+HRSDK/
+HRSDK_3.0.12/
+runs/
+datasets
+
 Yolo_v8.py
 yolov8n.pt
 windows_v1.8.1.zip
