@@ -10,8 +10,7 @@ table=cv2.imread("combine.png")
 #球座標標示
 balls=np.array([[120, 740],  #白球
                 [310, 810],  #目標球
-                [350, 750],  #其他球
-                [400, 925]]) 
+                [400, 925]]) #干擾球
 white_ball=balls[0]
 target_ball=balls[1]
 for i in balls:
@@ -40,10 +39,6 @@ def collide(w_v, t_v, ball):
     dv_bw = np.linalg.norm(v_bw)
     dv_bt = np.linalg.norm(v_bt)
 
-    print("障礙球到a", dv_bt)
-    print("障礙球到b", dv_bw)
-    print("a和b的距離",dv_oab)
-
     #淘汰：先篩選出點到直線距離<56，並淘汰他球到任意目標<兩目標距離的球路
     if(dis < 56):
         if(dv_bw > dv_oab or dv_bt > dv_oab):
@@ -55,6 +50,7 @@ def collide(w_v, t_v, ball):
     
 #角度
 theta=np.empty(6, dtype=float)
+#print(theta)
 
 #計算向量/長度
 v1 = np.subtract(balls[1],balls[0])
@@ -67,15 +63,12 @@ for i in range(int(len(hole))):
     dot=(np.dot(v,v1))/(dv*dv1)
     theta[i]=np.degrees(np.arccos(dot))
     #print(theta)
-    print(f"第{i+1}個洞: {hole[i]}")
 
-
-    print("白球到目標球")
     test = collide(white_ball,target_ball,balls[2])
-    print("目標球到洞")
     test_h = collide(target_ball, hole[i], balls[2])
     
     if(theta[i] < 80 ):
+        print(i)
         
         if(test and test_h):
     
