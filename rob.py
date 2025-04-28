@@ -11,8 +11,8 @@ table = cv2.imread("combine.png")
 balls = np.array([
     [120, 740],  # 白球
     [310, 810],  # 目標球
-    [200, 550],  # 障礙球1
-    [400, 925],  # 障礙球2
+    [400, 925],  # 障礙球1
+    [350, 750],  # 障礙球2
 ])
 
 white_ball = balls[0]
@@ -77,6 +77,8 @@ for i in range(len(hole)):
 
     if theta[i] < 80:
         # 確認所有障礙球是否都不擋路
+
+        
         other_balls = balls[2:]
         clear_to_target = path_clear(white_ball, target_ball, other_balls)
         clear_to_hole = path_clear(target_ball, hole[i], other_balls)
