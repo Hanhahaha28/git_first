@@ -31,7 +31,7 @@ def collide(w_v, t_v, ball):
     
     #計算點到直線
     v_ab = (w_v[1]-t_v[1], -w_v[0]+t_v[0])
-    dv_ab=np.linalg.norm(v_ab)
+    dv_ab = np.linalg.norm(v_ab)
     dis = abs((w_v[1]-t_v[1])*ball[0]+(-w_v[0]+t_v[0])*ball[1]+t_v[1]*w_v[0]-t_v[0]*w_v[1])/dv_ab
 
     #計算兩目標的向量及距離
@@ -49,21 +49,6 @@ def collide(w_v, t_v, ball):
 
         if(dv_bw > dv_oab or dv_bt > dv_oab):
              return 1
-        elif(dis < radius):
-            v_aball = np.subtract(w_v,ball)
-            dv_aball = np.linalg.norm(v_aball)
-            vv_aball = v_aball / dv_aball 
-
-            #計算假想球位置
-            faball_x=ball[0] + int(vv_aball[0]*2*radius)
-            faball_y=ball[1] + int(vv_aball[1]*2*radius)
-
-            #畫出假想球
-            cv2.circle(table,(faball_x,faball_y),28,(255,200,255),2)
-
-            #畫出路徑
-            cv2.arrowedLine(table,balls[0],(faball_x,faball_y),(255,200,0),5)
-            # cv2.arrowedLine(table,balls[1],hole[i],(255,200,0),5)             
         else:
             return 0
                  
@@ -76,6 +61,55 @@ def path(w_v, t_v, other):
         if collide(w_v,t_v,ball) == 0:
             return 0
     return 1
+
+#組合判斷
+def com(h_v, t_v, ball):
+    
+
+
+    #計算點到直線
+    v_ab = (h_v[1]-t_v[1], -h_v[0]+t_v[0])
+    dv_ab = np.linalg.norm(v_ab)
+    dis = abs((h_v[1]-t_v[1])*ball[0]+(-h_v[0]+t_v[0])*ball[1]+t_v[1]*h_v[0]-t_v[0]*h_v[1])/dv_ab
+
+    #計算兩目標的向量及距離
+    v_oab = (h_v[0]-t_v[0],h_v[1]-t_v[1])
+    dv_oab = np.linalg.norm(v_oab)
+
+    #計算他球與兩目標的向量及距離
+    v_bw = (ball[0]-h_v[0],ball[1]-h_v[1])
+    v_bt = (ball[0]-t_v[0],ball[1]-t_v[1])
+    dv_bw = np.linalg.norm(v_bw)
+    dv_bt = np.linalg.norm(v_bt)
+
+    #淘汰：先篩選出點到直線距離<56，並淘汰他球到任意目標<兩目標距離的球路
+    if(dis < radius):
+
+        if(dv_bw < dv_oab or dv_bt < dv_oab):
+
+            #組合球的假想球向量、長度、單位向量 
+            v_aball = np.subtract(h_v,t_v)
+            dv_aball = np.linalg.norm(v_aball)
+            vv_aball = v_aball / dv_aball 
+
+            #目標球的假想球向量、長度、單位向量 
+            v_aball = np.subtract(h_v,t_v)
+            dv_aball = np.linalg.norm(v_aball)
+            vv_aball = v_aball / dv_aball             
+
+            #計算假想球位置
+            faball_x = ball[0] - int(vv_aball[0]*2*radius)
+            faball_y = ball[1] - int(vv_aball[1]*2*radius)
+
+            #畫出假想球
+            cv2.circle(table,(faball_x,faball_y),28,(255,200,255),2)
+
+            #畫出路徑
+            cv2.arrowedLine(table,balls[0],(faball_x,faball_y),(255,200,0),5)
+            cv2.arrowedLine(table,balls[1],hole[i],(255,200,0),5)  
+  
+    
+
     
 #角度
 theta=np.empty(6, dtype=float)
@@ -92,11 +126,8 @@ for i in range(int(len(hole))):
     dot=(np.dot(v,v1))/(dv*dv1)
     theta[i]=np.degrees(np.arccos(dot))
     #print(theta)
-
-    # #檢查是否有碰撞
-    # test = collide(white_ball,target_ball,balls[2])
-    # test_h = collide(target_ball, hole[i], balls[2])
     
+    #角度判斷
     if(theta[i] < 80 ):
         
         #檢查路徑
@@ -118,7 +149,12 @@ for i in range(int(len(hole))):
             #畫出路徑
             cv2.arrowedLine(table,balls[0],(f_x,f_y),(255,0,0),5)
             cv2.arrowedLine(table,balls[1],hole[i],(255,0,0),5)
-
+        
+        #組合球
+        test_h = com(hole[i], target_ball, balls[2])
+        
+        
+        
 #順時針旋轉90度
 table = cv2.rotate(table, cv2.ROTATE_90_CLOCKWISE)
 
